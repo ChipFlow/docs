@@ -53,7 +53,7 @@ Here's where we add the flash to our design:
 .. code-block:: python
 
     self.rom = SPIMemIO(
-        flash=self.require(platform, "QSPIFlash")().add(m, platform)
+        flash=self.load_provider(platform, "QSPIFlash").add(m)
     )
 
 The implementations, which are provided by ChipFlow, look a bit different for each context.

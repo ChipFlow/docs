@@ -64,7 +64,7 @@ QSPIFlash for a Board
 For a board, in our case a ULX3S board, we need a means of accessing the clock bin (``USRMCLK``) and buffer primitives (``OBZ``, ``BB``) to join it together:
 
 .. code-block:: python
-    
+
         flash = QSPIPins()
 
         plat_flash = platform.request("spi_flash", dir=dict(cs='-', copi='-', cipo='-', wp='-', hold='-'))
@@ -150,8 +150,18 @@ Now that we have our simulation binary, and a BIOS, we can run it:
 
 You should see console output like this:
 
-.. image:: images/simulation-output.png
-  :alt: Simulation output
+.. code-block:: bash
+
+ 🐱: nyaa~!
+ SoC type: CA7F100F
+ SoC version: 43D6A2C3
+ Flash ID: CA7CA7FF
+ Entering QSPI mode
+ Zeroing initial RAM...
+ Kernel: 00800000
+ DTB: 00F80000
+ DTB magic: FFFFFFFF
+ about to boop the kernel, ganbatte~!
 
 Run the design on a ULX3S board
 -------------------------------
@@ -192,9 +202,18 @@ Connecting to your board on macOS
   :bash:`screen /dev/tty.usbserial-K00219 115200`.
 * Now, press the ``PWR`` button on your board, which will restart the design.
 * Within ``screen``, you should now see output like:
+   .. code-block:: bash
 
-  .. image:: images/board-output.png
-    :alt: Board console output
+     🐱: nyaa~!
+     SoC type: CA7F100F
+     SoC version: B79C1FD7
+     Flash ID: EF401800
+     Entering QSPI mode
+     Zeroing initial RAM...
+     Kernel: 00800000
+     DTB: 00F80000
+     DTB magic: FFFFFFFF
+     about to boop the kernel, ganbatte~!
 
 * To exit screen, use ``CTRL-A``, then ``CTRL-\``.
 

@@ -1,92 +1,173 @@
-# Introduction to the ChipFlow platform
+.. role:: bash(code)
+   :language: bash
 
-## Preparing your local environment
+Introduction to the ChipFlow platform
+=====================================
 
- - [Poetry must be installed](https://python-poetry.org/docs/#installation). 
-   - Note: If you choose to install `poetry` within a venv, `poetry` will reuse 
+Preparing your local environment
+--------------------------------
+
+* `Poetry must be installed <https://python-poetry.org/docs/#installation>`_, which will be used to install the Python dependencies. 
+   .. note::
+     If you choose to install ``poetry`` within a venv, ``poetry`` will reuse 
      that venv instead of creating a new one, so you should ensure that its 
      version of Python is compatible with the requirements of this project 
-     in `./pyproject.toml`.
- - Docker (or podman) should be available, which is used for the 
-   [dockcross](https://github.com/dockcross/dockcross) builds.
- - [openFPGAloader is required](https://trabucayre.github.io/openFPGALoader/guide/install.html) to use a board.
-   - macOS: Easiest way is `brew install openfpgaloader`.
-   - Linux/Windows: Easiest way may be via the [OSS CAD Suite](https://github.com/YosysHQ/oss-cad-suite-build).
- - Clone this repository to your local environment.
- - Run `make init` to install the dependencies.
+     in ``./pyproject.toml``.
 
-## Run the design in simulation
+* `Docker <https://docs.docker.com/get-docker/>`_  (or `podman <https://podman.io/getting-started/installation>`_) should be available, it's used for the `dockcross <https://github.com/dockcross/dockcross>`_ builds.
+
+* `openFPGAloader is required <https://trabucayre.github.io/openFPGALoader/guide/install.html>`_ to use a board.
+   * macOS: Easiest way is :bash:`brew install openfpgaloader`.
+   * Linux/Windows: Easiest way may be via the `OSS CAD Suite <https://github.com/YosysHQ/oss-cad-suite-build>`_.
+
+* Clone this repository to your local environment.
+
+* Run :bash:`make init` to install the dependencies.
+
+The example project
+-------------------
+
+The project contains:
+
+* ``.gitlab-ci.yml`` - Runs linting and tests in GitLab CI.
+* ``chipflow.toml`` - Congiuration telling the ChipFlow library how to load your Python design and allows you to configure the ChipFlow platform.
+* ``Makefile`` - Contains helpful shortcuts to the CLI tools used in the project.
+* ``my_design/chipflow.py`` - Used as a loader by the ChipFlow platform for the design.
+* ``my_design/design.py`` - This has the actual chip design.
+* ``my_design/my_contexts/*`` - These contexts control how your design will be presented to the ChipFlow contexts, ``simulation``(ulation), (FPGA)``board`` and ``silicon``.
+* ``my_design/sim/*`` - The C++ and `doit build file <https://pydoit.org/>`_ which builds the binary which will simulate our design.
+* ``my_design/software/*`` - The C++ and `doit build file <https://pydoit.org/>`_ for the software/BIOS which we will load onto our design when it's running in simulation or on a board.
+* ``tests/*`` - This has some pytest integration tests which cover the sim/board/silicon builds.
+
+The design
+----------
+
+The chip design is contained within the `MySoC` class in ``my_design/design.py``, and is described 
+using the `Amaranth hardware definition language <https://github.com/amaranth-lang/amaranth>`_.
+
+Something a bit unusual is that we change the implemention of some peripherals, 
+such as ``QSPIFlash``, according to the context the design is being used in. 
+
+Here's where we add the flash to our design:
+
+.. code-block:: python
+
+    self.rom = SPIMemIO(
+        flash=self.require(platform, "QSPIFlash")().add(m, platform)
+    )
+
+The implementations, which are provided by ChipFlow, look a bit different...
+
+QSPIFlash for a Board
+~~~~~~~~~~~~~~~~~~~~~
+
+For a board, we need to... TODO!
+
+QSPIFlash for Simulation
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+For simulation, we add a C++ model which will mock/simulate the flash:
+
+.. code-block:: python
+
+    flash = QSPIPins()
+    m.submodules.flash = platform.add_model("spiflash_model", flash, edge_det=['clk_o', 'csn_o'])
+    return flash
+
+QSPIFlash for Silicon
+~~~~~~~~~~~~~~~~~~~~~
+
+For Silicon we just hook up the IO.
+
+.. code-block:: python
+
+    flash = QSPIPins()
+    platform.connect_io(m, flash, "flash")
+    return flash
+
+
+Run the design in simulation
+----------------------------
 
 First we need to build a local simulation binary. The simulation uses blackbox C++ models 
 of external peripherals, such as the flash, to interact with:
 
-```
-make sim-build
-```
+.. code-block:: bash
+
+    make sim-build
 
 Next we need to build the software/BIOS which will run on our design. The build
 of this depends on the design itself.
 
-```
-make software-build
-```
+.. code-block:: bash
+
+    make software-build
+
 
 Now that we have our simulation and a BIOS, we can run it:
 
-```
-make sim-run
-```
+.. code-block:: bash
+
+    make sim-run
 
 You should see something like this:
 
-![Simulation output](docs/simulation-output.png)
+.. image:: images/simulation-output.png
+  :alt: Simulation output
 
-## Run the design on a ULX3S board
+Run the design on a ULX3S board
+-------------------------------
 
 Build the design into a bitstream for the board (doesn't load it):
 
-```
-make board-build
-```
+.. code-block:: bash
+
+    make board-build
 
 Build the bios, and program BIOS into the board's flash:
 
-```
-make software-build
-make board-load-software-ulx3s
-```
+.. code-block:: bash
+
+    make software-build
+    make board-load-software-ulx3s
 
 Load SoC onto board (program its bitstream):
 
-```
-make board-load-ulx3s
-```
+.. code-block:: bash
+
+    make board-load-ulx3s
 
 Your board should now be running. You can connect to it via its serial port:
 
-### Connecting to your board on macOS
+Connecting to your board on macOS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Find the serial port for your board, using `ls /dev/tty.*` or `ls /dev/cu.*`. 
-  You should see something like `/dev/tty.usbserial-K00219` for your board.
+* Find the serial port for your board, using :bash:`ls /dev/tty.*` or :bash:`ls /dev/cu.*`. 
+  You should see something like ``/dev/tty.usbserial-K00219`` for your board.
 * Connect to the port via the screen utility, at baud 112200, with the command:
-  `screen /dev/tty.usbserial-K00219 115200`.
-* Now, press the `PWR` button on your board, which will restart the design.
-* Within screen, should now see output like:
-  ![Board output](docs/board-output.png)
-* To exit screen, use `CTRL-A`, then `CTRL-\`.
+  :bash:`screen /dev/tty.usbserial-K00219 115200`.
+* Now, press the ``PWR`` button on your board, which will restart the design.
+* Within ``screen``, should now see output like:
+
+  .. image:: images/board-output.png
+    :alt: Board console output
+
+* To exit screen, use ``CTRL-A``, then ``CTRL-\``.
 
 
-## Generate an RTLIL from your design
+Generate an RTLIL from your design
+----------------------------------
 
-```
-make silicon-rtlil
-```
+.. code-block:: bash
+
+    make silicon-rtlil
 
 You should now have an `build/my_design.rtlil`.
 
-## Send your RTLIL to the ChipFlow cloud
+Send your RTLIL to the ChipFlow cloud
+-------------------------------------
 
-```
-make send-to-chipflow
-```
+.. code-block:: bash
+
+    make send-to-chipflow
 

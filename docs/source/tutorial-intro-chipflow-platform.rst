@@ -64,6 +64,7 @@ QSPIFlash for a Board
 For a board, in our case a ULX3S board, we need a means of accessing the clock bin (``USRMCLK``) and buffer primitives (``OBZ``, ``BB``) to join it together:
 
 .. code-block:: python
+    
         flash = QSPIPins()
 
         plat_flash = platform.request("spi_flash", dir=dict(cs='-', copi='-', cipo='-', wp='-', hold='-'))

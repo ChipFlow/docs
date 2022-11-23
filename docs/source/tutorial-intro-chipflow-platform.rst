@@ -61,7 +61,7 @@ The implementations, which are provided by ChipFlow, look a bit different for ea
 QSPIFlash for a Board
 ~~~~~~~~~~~~~~~~~~~~~
 
-For a board, in our case a ULX3S board, we need a means of accessing the clock bin (``USRMCLK``) and buffer primitives (``OBZ``, ``BB``) to join it together:
+For a board, in our case a ULX3S board, we need a means of accessing the clock pin (``USRMCLK``) and buffer primitives (``OBZ``, ``BB``) to join it together:
 
 .. code-block:: python
 
@@ -190,7 +190,7 @@ Now, we load the software/BIOS and design onto board (program its bitstream):
     make board-load-software-ulx3s
     make board-load-ulx3s
 
-Your board should now be running. For us to check thay it's working, we can 
+Your board should now be running. For us to check that it's working, we can 
 connect to it via its serial port:
 
 Connecting to your board on macOS

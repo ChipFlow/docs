@@ -56,12 +56,44 @@ Here's where we add the flash to our design:
         flash=self.require(platform, "QSPIFlash")().add(m, platform)
     )
 
-The implementations, which are provided by ChipFlow, look a bit different...
+The implementations, which are provided by ChipFlow, look a bit different for each context.
 
 QSPIFlash for a Board
 ~~~~~~~~~~~~~~~~~~~~~
 
-For a board, we need to... TODO!
+For a board, in our case a ULX3S board, we need a means of accessing the clock bin (``USRMCLK``) and buffer primitives (``OBZ``, ``BB``) to join it together:
+
+.. code-block:: python
+        flash = QSPIPins()
+
+        plat_flash = platform.request("spi_flash", dir=dict(cs='-', copi='-', cipo='-', wp='-', hold='-'))
+        # Flash clock requires a special primitive to access in ECP5
+        m.submodules.usrmclk = Instance(
+            "USRMCLK",
+            i_USRMCLKI=flash.clk_o,
+            i_USRMCLKTS=ResetSignal(),  # tristate in reset for programmer accesss
+            a_keep=1,
+        )
+        # IO pins and buffers
+        m.submodules += Instance(
+            "OBZ",
+            o_O=plat_flash.cs.io,
+            i_I=flash.csn_o,
+            i_T=ResetSignal(),
+        )
+        # Pins in order
+        data_pins = ["copi", "cipo", "wp", "hold"]
+
+        for i in range(4):
+            m.submodules += Instance(
+                "BB",
+                io_B=getattr(plat_flash, data_pins[i]).io,
+                i_I=flash.d_o[i],
+                i_T=~flash.d_oe[i],
+                o_O=flash.d_i[i]
+            )
+        return flash
+
 
 QSPIFlash for Simulation
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,28 +121,33 @@ For Silicon we just hook up the IO.
 Run the design in simulation
 ----------------------------
 
-First we need to build a local simulation binary. The simulation uses blackbox C++ models 
-of external peripherals, such as the flash, to interact with:
+Running our design and its software in simulation allows us to loosely check 
+that it's working. 
+
+First we need to build a local simulation binary. The simulation uses 
+blackbox C++ models of external peripherals, such as the flash, to interact 
+with:
 
 .. code-block:: bash
 
     make sim-build
 
-Next we need to build the software/BIOS which will run on our design. The build
-of this depends on the design itself.
+After running this, we will have a simulation binary at ``build/sim/sim_soc``. 
+
+We can't run it just yet, as it needs the software/BIOS too. To build the 
+software we run:
 
 .. code-block:: bash
 
     make software-build
 
-
-Now that we have our simulation and a BIOS, we can run it:
+Now that we have our simulation binary, and a BIOS, we can run it:
 
 .. code-block:: bash
 
     make sim-run
 
-You should see something like this:
+You should see console output like this:
 
 .. image:: images/simulation-output.png
   :alt: Simulation output
@@ -118,36 +155,42 @@ You should see something like this:
 Run the design on a ULX3S board
 -------------------------------
 
-Build the design into a bitstream for the board (doesn't load it):
+We can also run our design on an FPGA board, currently only the ULX3S is supported.
+
+First we need to build the design into a bitstream for the board:
 
 .. code-block:: bash
 
     make board-build
 
-Build the bios, and program BIOS into the board's flash:
+This will write a file ``build/top.bit``. As for the simulation, we need the 
+software/BIOS too. 
+
+If we haven't already, build the bios:
 
 .. code-block:: bash
 
     make software-build
-    make board-load-software-ulx3s
 
-Load SoC onto board (program its bitstream):
+Now, we load the software/BIOS and design onto board (program its bitstream):
 
 .. code-block:: bash
 
+    make board-load-software-ulx3s
     make board-load-ulx3s
 
-Your board should now be running. You can connect to it via its serial port:
+Your board should now be running. For us to check thay it's working, we can 
+connect to it via its serial port:
 
 Connecting to your board on macOS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * Find the serial port for your board, using :bash:`ls /dev/tty.*` or :bash:`ls /dev/cu.*`. 
   You should see something like ``/dev/tty.usbserial-K00219`` for your board.
-* Connect to the port via the screen utility, at baud 112200, with the command:
+* Connect to the port via the screen utility, at baud ``112200``, with the command:
   :bash:`screen /dev/tty.usbserial-K00219 115200`.
 * Now, press the ``PWR`` button on your board, which will restart the design.
-* Within ``screen``, should now see output like:
+* Within ``screen``, you should now see output like:
 
   .. image:: images/board-output.png
     :alt: Board console output
@@ -155,8 +198,13 @@ Connecting to your board on macOS
 * To exit screen, use ``CTRL-A``, then ``CTRL-\``.
 
 
-Generate an RTLIL from your design
-----------------------------------
+Silicon! 
+--------
+
+When you want to go to silicon for your design, the ChipFlow API gets involved.
+
+First we build an `RTLIL file <https://en.wikipedia.org/wiki/Register-transfer_level>`_, 
+which describes the design as registers and gates.
 
 .. code-block:: bash
 
@@ -165,9 +213,12 @@ Generate an RTLIL from your design
 You should now have an `build/my_design.rtlil`.
 
 Send your RTLIL to the ChipFlow cloud
--------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+At this point, we'll send the RTLIL along with configuration to the ChipFlow 
+API, which will perform silicon-focused checks on the design, and provide 
+information about its running speed:
 
 .. code-block:: bash
 
     make send-to-chipflow
-

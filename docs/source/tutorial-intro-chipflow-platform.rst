@@ -45,10 +45,11 @@ The design
 The chip design is contained within the `MySoC` class in ``my_design/design.py``, and is described 
 using the `Amaranth hardware definition language <https://github.com/amaranth-lang/amaranth>`_.
 
-Something a bit unusual is that we change the implemention of some peripherals, 
-such as ``QSPIFlash``, according to the context the design is being used in. 
+Something a bit unusual about the design is that we have to change how some of the 
+peripherals are physically accessed, according to the context the design is being 
+used in .
 
-Here's where we add the flash to our design:
+For example, here's where we add ``QSPIFlash`` to our design:
 
 .. code-block:: python
 
@@ -56,12 +57,12 @@ Here's where we add the flash to our design:
         flash=self.load_provider(platform, "QSPIFlash").add(m)
     )
 
-The implementations, which are provided by ChipFlow, look a bit different for each context.
+The implementations, which are provided by ChipFlow, look a bit different for each context:
 
 QSPIFlash for a Board
 ~~~~~~~~~~~~~~~~~~~~~
 
-For a board, in our case a ULX3S board, we need a means of accessing the clock pin (``USRMCLK``) and buffer primitives (``OBZ``, ``BB``) to join it together:
+For a board, in our case a ULX3S board, we need a means of accessing the clock pin (``USRMCLK``) and buffer primitives (``OBZ``, ``BB``) to access the other pins:
 
 .. code-block:: python
 
@@ -95,6 +96,7 @@ For a board, in our case a ULX3S board, we need a means of accessing the clock p
             )
         return flash
 
+This is specific to the ECP5 family of boards, and the code look different for others.
 
 QSPIFlash for Simulation
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -236,8 +238,11 @@ Send your RTLIL to the ChipFlow cloud
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 At this point, we'll send the RTLIL along with configuration to the ChipFlow 
-API, which will perform silicon-focused checks on the design, and provide 
-information about its running speed:
+API. 
+
+Within the ChipFlow platform, we will place & route the design for the chosen 
+ASIC technologies, perform silicon-focused checks on the design, and provide 
+information about its maximum frequency.
 
 .. code-block:: bash
 

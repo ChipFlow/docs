@@ -96,7 +96,7 @@ For a board, in our case a ULX3S board, we need a means of accessing the clock p
             )
         return flash
 
-This is specific to the ECP5 family of boards, and the code look different for others.
+This is specific to the ECP5 family of boards, and the code would look different for others.
 
 QSPIFlash for Simulation
 ~~~~~~~~~~~~~~~~~~~~~~~~

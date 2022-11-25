@@ -6,7 +6,8 @@ Introduction to the ChipFlow platform
 
 This gives an overview of how a chip design looks with the ChipFlow platform.
 
-It shows you an `example repository <https://gitlab.com/ChipFlow/example-socs>`_, then guides you to make a change and see the results.
+It guides you through setting up an `example repository <https://gitlab.com/ChipFlow/example-socs>`_, 
+making a change and seeing the results.
 
 
 Preparing your local environment

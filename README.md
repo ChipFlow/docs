@@ -1,4 +1,3 @@
-# ChipFlow docs
+# ChipFlow docs - Moved
 
-ChipFlow docs repository. 
-Uses https://readthedocs.org/ and publishes to https://docs.chipflow.io/.
+This has moved to https://gitlab.com/ChipFlow/chipflow-docs
